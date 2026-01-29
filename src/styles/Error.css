@@ -1,0 +1,31 @@
+.error-banner {
+    background: rgba(224, 108, 117, 0.15); /* Soft red background */
+    border-left: 4px solid #e06c75;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-family: Inter, sans-serif;
+}
+
+.error-title {
+    color: #e06c75;
+    font-weight: bold;
+    font-size: 14px;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.error-msg {
+    color: var(--text-main);
+    font-size: 13px;
+    margin: 0;
+    opacity: 0.9;
+}
+
+.error-loc {
+    display: block;
+    margin-top: 8px;
+    font-size: 11px;
+    font-family: "Fira Code", monospace;
+    color: #24c8db; 
+}

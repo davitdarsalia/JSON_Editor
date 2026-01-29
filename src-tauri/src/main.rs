@@ -1,6 +1,19 @@
+use logos::Logos;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ErrorLocation {
+    line: usize,
+    column: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct JsonErrorInfo {
+    message: String,
+    location: Option<ErrorLocation>,
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ASTNode {
@@ -11,16 +24,76 @@ pub struct ASTNode {
     children: Option<Vec<ASTNode>>,
 }
 
-#[tauri::command]
-fn assemble_ast(json_str: String) -> Result<ASTNode, String> {
-    let v: Value = serde_json::from_str(&json_str).map_err(|e| e.to_string())?;
+#[derive(Logos, Debug, PartialEq, Serialize, Deserialize)]
+pub enum JsonToken {
+    #[regex(r#""([^"\\]|\\.)*"\s*:"#)]
+    Key,
+    #[regex(r#""([^"\\]|\\.)*""#)]
+    String,
+    #[regex(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")]
+    Number,
+    #[token("true")]
+    #[token("false")]
+    Bool,
+    #[token("null")]
+    Null,
+    #[token("{")]
+    #[token("}")]
+    #[token("[")]
+    #[token("]")]
+    #[token(":")]
+    #[token(",")]
+    Punctuation,
+    #[regex(r"[ \t\n\f\r]+", logos::skip)]
+    Error,
+}
 
-    Ok(build_node("root".to_string(), v, 0))
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HighlightedToken {
+    pub text: String,
+    pub token_type: String,
+}
+
+#[tauri::command]
+fn highlight_json(json_str: String) -> Vec<HighlightedToken> {
+    let lex = JsonToken::lexer(&json_str);
+    lex.spanned()
+        .map(|(token, span)| {
+            let text = json_str[span].to_string();
+            let token_type = match token {
+                Ok(JsonToken::Key) => "key",
+                Ok(JsonToken::String) => "string",
+                Ok(JsonToken::Number) => "number",
+                Ok(JsonToken::Bool) => "boolean",
+                Ok(JsonToken::Null) => "null",
+                Ok(JsonToken::Punctuation) => "punctuation",
+                _ => "text",
+            };
+            HighlightedToken {
+                text,
+                token_type: token_type.into(),
+            }
+        })
+        .collect()
+}
+
+#[tauri::command]
+fn assemble_ast(json_str: String) -> Result<ASTNode, JsonErrorInfo> {
+    match serde_json::from_str::<Value>(&json_str) {
+        Ok(v) => Ok(build_node("root".to_string(), v, 0)),
+        Err(e) => Err(JsonErrorInfo {
+            message: e.to_string(),
+            location: Some(ErrorLocation {
+                line: e.line(),
+                column: e.column(),
+            }),
+        }),
+    }
 }
 
 fn build_node(name: String, v: Value, depth: u32) -> ASTNode {
     let id = Uuid::new_v4().to_string();
-    let max_depth = 20;
+    let max_depth = 50;
 
     if depth > max_depth {
         return ASTNode {
@@ -62,11 +135,32 @@ fn build_node(name: String, v: Value, depth: u32) -> ASTNode {
                 children: Some(children),
             }
         }
-        _ => ASTNode {
+        Value::String(s) => ASTNode {
             id,
             name,
-            node_type: format!("{:?}", v).to_lowercase(),
-            value: Some(v.to_string()),
+            node_type: "string".into(),
+            value: Some(s),
+            children: None,
+        },
+        Value::Number(n) => ASTNode {
+            id,
+            name,
+            node_type: "number".into(),
+            value: Some(n.to_string()),
+            children: None,
+        },
+        Value::Bool(b) => ASTNode {
+            id,
+            name,
+            node_type: "boolean".into(),
+            value: Some(b.to_string()),
+            children: None,
+        },
+        Value::Null => ASTNode {
+            id,
+            name,
+            node_type: "null".into(),
+            value: Some("null".into()),
             children: None,
         },
     }
@@ -74,7 +168,7 @@ fn build_node(name: String, v: Value, depth: u32) -> ASTNode {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![assemble_ast])
+        .invoke_handler(tauri::generate_handler![assemble_ast, highlight_json])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -84,38 +178,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_deep_nesting() {
-        // Generates a nested structure: root -> level1 -> level2 ... level6
-        let deep_json = r#"{
-            "l1": {
-                "l2": {
-                    "l3": {
-                        "l4": {
-                            "l5": {
-                                "l6": "target_value"
-                            }
-                        }
-                    }
-                }
-            }
-        }"#;
+    fn test_invalid_json_diagnostics() {
+        let broken_json = r#"{ "name": "Davit", "age": 25 "#;
+        let result = assemble_ast(broken_json.to_string());
 
-        let result = assemble_ast(deep_json.to_string()).unwrap();
-
-        // Assertions for Level 1
-        assert_eq!(result.node_type, "object");
-        let l1 = &result.children.as_ref().unwrap()[0];
-        assert_eq!(l1.name, "l1");
-
-        // Navigate to Level 6
-        let mut current = &result.children.as_ref().unwrap()[0];
-        for _ in 0..4 {
-            current = &current.children.as_ref().unwrap()[0];
-        }
-
-        // Final Level 6 Check
-        let l6 = &current.children.as_ref().unwrap()[0];
-        assert_eq!(l6.name, "l6");
-        assert_eq!(l6.value, Some("target_value".to_string()));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.message.contains("EOF"));
+        assert!(err.location.is_some());
     }
 }

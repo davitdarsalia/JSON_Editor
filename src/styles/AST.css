@@ -1,0 +1,29 @@
+.ast-node {
+    margin-left: 20px;
+    font-size: 13px;
+}
+
+.ast-label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.ast-label:hover {
+    background: rgba(36, 200, 219, 0.1);
+}
+
+.node-tag,
+.toggle-icon {
+    filter: brightness(0.9);
+}
+
+.ast-children {
+    margin: 4px 0;
+    margin-left: 8px;
+    border-left: 1px solid rgba(128, 128, 128, 0.2);
+}
