@@ -1,36 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
-import "./Theme.css";
+import { JSONASTNode } from "./components/JSON_AST_node.component";
 
-const ASTNode = ({ node }: { node: ASTNodeData }) => {
-  const [isOpen, setIsOpen] = useState(true);
-  const hasChildren = node.children && node.children.length > 0;
 
-  return (
-    <div className="ast-node">
-      <div className="ast-label" onClick={() => setIsOpen(!isOpen)}>
-        {hasChildren && (
-          <span className={`toggle-icon ${isOpen ? "open" : ""}`}>▶</span>
-        )}
-        <span className="node-name">{node.name}</span>
-        <span className={`node-tag ${node.node_type}`}>{node.node_type}</span>
-        {node.value && <span className="node-val">{node.value}</span>}
-      </div>
-      {isOpen && hasChildren && (
-        <div className="ast-children">
-          {node.children!.map((child) => (
-            <ASTNode key={child.id} node={child} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
 
 function App() {
   const [leftWidth, setLeftWidth] = useState(50);
   const [inputData, setInputData] = useState("");
+  const [error, setError] = useState<JSONErrorInfo | null>(null);
   const [ast, setAst] = useState<ASTNodeData | null>(null);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -48,6 +25,7 @@ function App() {
     const timer = setTimeout(async () => {
       if (!inputData.trim()) {
         setAst(null);
+        setError(null);
         return;
       }
       try {
@@ -55,8 +33,11 @@ function App() {
           jsonStr: inputData,
         });
         setAst(result);
+        setError(null);
       } catch (e) {
         console.error("Parse Error:", e);
+        setAst(null);
+        setError(e as JSONErrorInfo);
       }
     }, 250);
     return () => clearTimeout(timer);
@@ -127,8 +108,20 @@ function App() {
         <div className="divider" onMouseDown={() => setIsResizing(true)} />
         <div className="panel" style={{ width: `${100 - leftWidth}%` }}>
           <div className="output-area">
+            {error && (
+              <div className="error-title">
+                <span className="error-title">Syntax Error</span>
+                <p className="error-msg">{error.message}</p>
+
+                {error.location && (
+                  <span className="error-loc">
+                    Line: {error.location.line}, Col: {error.location.column}
+                  </span>
+                )}
+              </div>
+            )}
             {ast ? (
-              <ASTNode node={ast} />
+              <JSONASTNode node={ast} />
             ) : (
               <div className="placeholder">Enter valid JSON to see AST</div>
             )}

@@ -6,3 +6,32 @@ declare interface ASTNodeData {
   children?: ASTNodeData[];
   depth: number;
 }
+
+interface ErrorLocation {
+  line: number;
+  column: number;
+}
+
+interface JSONErrorInfo {
+  message: string;
+  location?: ErrorLocation;
+}
+
+/*
+  Props
+*/
+declare interface ASTExplorerPanelProps {
+  ast: ASTNodeData | null;
+  error: JSONErrorInfo | null;
+  width: number;
+}
+
+declare interface EditorPanelProps {
+  value: string;
+  onChange: (val: string) => void;
+  width: number;
+}
+
+declare interface ASTNodeProps {
+  node: ASTNodeData;
+}

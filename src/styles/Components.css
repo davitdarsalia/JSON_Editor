@@ -1,27 +1,3 @@
-/* Layout Geometry */
-body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-}
-
-.container {
-    height: 100vh;
-    width: 100vw;
-    display: flex;
-    flex-direction: column;
-}
-
-.app-header {
-    height: 35px;
-    min-height: 35px;
-    display: flex;
-    align-items: center;
-    padding-left: 15px;
-    user-select: none;
-    -webkit-app-region: drag;
-}
-
 .split-view {
     display: flex;
     flex: 1;
@@ -45,7 +21,6 @@ body {
     width: 6px;
 }
 
-/* Editor Components */
 .editor-container {
     position: relative;
     flex: 1;
@@ -83,40 +58,9 @@ body {
     pointer-events: none;
 }
 
-/* Output Area */
 .output-area {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
     font-family: "Fira Code", monospace;
-}
-
-.ast-node {
-    margin-left: 20px;
-    font-size: 13px;
-}
-
-.ast-label {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    padding: 6px 8px;
-    border-radius: 4px;
-    white-space: nowrap;
-    line-height: 1.4;
-}
-
-.ast-label:hover {
-    background: rgba(36, 200, 219, 0.1);
-}
-
-.node-tag,
-.toggle-icon {
-    filter: brightness(0.9);
-}
-
-.ast-children {
-    margin: 4px 0;
-    margin-left: 8px;
-    border-left: 1px solid rgba(128, 128, 128, 0.2);
 }
