@@ -1,5 +1,6 @@
+use logos::Logos;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value};
+use serde_json::Value;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -21,6 +22,59 @@ pub struct ASTNode {
     node_type: String,
     value: Option<String>,
     children: Option<Vec<ASTNode>>,
+}
+
+#[derive(Logos, Debug, PartialEq, Serialize, Deserialize)]
+pub enum JsonToken {
+    #[regex(r#""([^"\\]|\\.)*"\s*:"#)]
+    Key,
+    #[regex(r#""([^"\\]|\\.)*""#)]
+    String,
+    #[regex(r"-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?")]
+    Number,
+    #[token("true")]
+    #[token("false")]
+    Bool,
+    #[token("null")]
+    Null,
+    #[token("{")]
+    #[token("}")]
+    #[token("[")]
+    #[token("]")]
+    #[token(":")]
+    #[token(",")]
+    Punctuation,
+    #[regex(r"[ \t\n\f\r]+", logos::skip)]
+    Error,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct HighlightedToken {
+    pub text: String,
+    pub token_type: String,
+}
+
+#[tauri::command]
+fn highlight_json(json_str: String) -> Vec<HighlightedToken> {
+    let lex = JsonToken::lexer(&json_str);
+    lex.spanned()
+        .map(|(token, span)| {
+            let text = json_str[span].to_string();
+            let token_type = match token {
+                Ok(JsonToken::Key) => "key",
+                Ok(JsonToken::String) => "string",
+                Ok(JsonToken::Number) => "number",
+                Ok(JsonToken::Bool) => "boolean",
+                Ok(JsonToken::Null) => "null",
+                Ok(JsonToken::Punctuation) => "punctuation",
+                _ => "text",
+            };
+            HighlightedToken {
+                text,
+                token_type: token_type.into(),
+            }
+        })
+        .collect()
 }
 
 #[tauri::command]
@@ -114,7 +168,7 @@ fn build_node(name: String, v: Value, depth: u32) -> ASTNode {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![assemble_ast])
+        .invoke_handler(tauri::generate_handler![assemble_ast, highlight_json])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

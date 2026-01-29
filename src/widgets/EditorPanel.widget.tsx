@@ -1,4 +1,16 @@
-import { FC, useMemo, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
+
+interface HighlightedToken {
+  text: string;
+  token_type: string;
+}
+
+interface EditorPanelProps {
+  value: string;
+  onChange: (val: string) => void;
+  width: number;
+}
 
 export const EditorPanel: FC<EditorPanelProps> = ({
   value,
@@ -7,6 +19,27 @@ export const EditorPanel: FC<EditorPanelProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
+  const [tokens, setTokens] = useState<HighlightedToken[]>([]);
+
+  useEffect(() => {
+    const fetchHighlight = async () => {
+      try {
+        const res = await invoke<HighlightedToken[]>("highlight_json", {
+          jsonStr: value,
+        });
+        setTokens(res);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchHighlight();
+  }, [value]);
+
+  const renderedHtml = useMemo(() => {
+    return tokens
+      .map((t) => `<span class="${t.token_type}">${t.text}</span>`)
+      .join("");
+  }, [tokens]);
 
   const handleScroll = () => {
     if (textareaRef.current && preRef.current) {
@@ -15,30 +48,13 @@ export const EditorPanel: FC<EditorPanelProps> = ({
     }
   };
 
-  const highlightedJson = useMemo(() => {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(
-        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-        (match) => {
-          let cls = "number";
-          if (/^"/.test(match)) cls = /:$/.test(match) ? "key" : "string";
-          else if (/true|false/.test(match)) cls = "boolean";
-          else if (/null/.test(match)) cls = "null";
-          return `<span class="${cls}">${match}</span>`;
-        },
-      );
-  }, [value]);
-
   return (
     <div className="panel" style={{ width: `${width}%` }}>
       <div className="editor-container">
         <pre
           ref={preRef}
           className="highlight-layer"
-          dangerouslySetInnerHTML={{ __html: highlightedJson + "\n" }}
+          dangerouslySetInnerHTML={{ __html: renderedHtml + "\n" }}
         />
         <textarea
           ref={textareaRef}

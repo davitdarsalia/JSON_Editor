@@ -17,6 +17,11 @@ interface JSONErrorInfo {
   location?: ErrorLocation;
 }
 
+declare interface HiglightedToken {
+  text: string;
+  token_type: string;
+}
+
 /*
   Props
 */
