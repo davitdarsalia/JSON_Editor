@@ -1,15 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-
-interface ASTNodeData {
-  id: string;
-  name: string;
-  node_type: string;
-  value?: string;
-  children?: ASTNodeData[];
-  depth: number;
-}
+import "./Theme.css";
 
 const ASTNode = ({ node }: { node: ASTNodeData }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -104,6 +96,7 @@ function App() {
   useEffect(() => {
     window.addEventListener("mousemove", resize);
     const stop = () => setIsResizing(false);
+
     window.addEventListener("mouseup", stop);
     return () => {
       window.removeEventListener("mousemove", resize);
@@ -147,4 +140,3 @@ function App() {
 }
 
 export default App;
-// 8.3
