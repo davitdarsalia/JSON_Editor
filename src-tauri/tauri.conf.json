@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.davit.json-editor",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "bun rsbuild dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "bun rsbuild build",
     "frontendDist": "../dist"
   },
   "app": {
