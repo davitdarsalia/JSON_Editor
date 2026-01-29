@@ -1,5 +1,5 @@
 :root {
-    --bg-main: #f6f6f6;
+    --bg-main: #1e1e1e;
     --text-main: #0f0f0f;
     --header-bg: #1e1e1e;
     --header-text: #888;
@@ -12,7 +12,7 @@
     --syntax-num: #d19a66;
     --syntax-bool: #c678dd;
     --syntax-null: #56b6c2;
-    --panel-bg: rgba(0, 0, 0, 0.05);
+    --panel-bg: #252526;
 
     font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -30,6 +30,7 @@ body {
     background-color: var(--bg-main);
     color: var(--text-main);
 }
+
 .app-header {
     background: var(--header-bg);
     color: var(--header-text);
@@ -51,7 +52,6 @@ body {
     background-color: var(--panel-bg);
 }
 
-/* Token Colors */
 .key,
 .node-name {
     color: var(--syntax-key);

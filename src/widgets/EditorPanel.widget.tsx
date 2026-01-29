@@ -19,7 +19,13 @@ export const EditorPanel: FC<EditorPanelProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
   const [tokens, setTokens] = useState<HighlightedToken[]>([]);
+
+  const lineNumbers = useMemo(() => {
+    const lines = value.split("\n").length;
+    return Array.from({ length: lines > 0 ? lines : 1 }, (_, i) => i + 1);
+  }, [value]);
 
   useEffect(() => {
     const fetchHighlight = async () => {
@@ -42,28 +48,41 @@ export const EditorPanel: FC<EditorPanelProps> = ({
   }, [tokens]);
 
   const handleScroll = () => {
-    if (textareaRef.current && preRef.current) {
-      preRef.current.scrollTop = textareaRef.current.scrollTop;
-      preRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    if (textareaRef.current && preRef.current && gutterRef.current) {
+      const { scrollTop, scrollLeft } = textareaRef.current;
+
+      preRef.current.scrollTop = scrollTop;
+      gutterRef.current.scrollTop = scrollTop;
+
+      preRef.current.scrollLeft = scrollLeft;
     }
   };
 
   return (
     <div className="panel" style={{ width: `${width}%` }}>
-      <div className="editor-container">
-        <pre
-          ref={preRef}
-          className="highlight-layer"
-          dangerouslySetInnerHTML={{ __html: renderedHtml + "\n" }}
-        />
-        <textarea
-          ref={textareaRef}
-          className="editor-input"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onScroll={handleScroll}
-          spellCheck={false}
-        />
+      <div className="editor-layout">
+        <div className="gutter" ref={gutterRef}>
+          {lineNumbers.map((num) => (
+            <div key={num} className="line-number">
+              {num}
+            </div>
+          ))}
+        </div>
+        <div className="editor-container">
+          <pre
+            ref={preRef}
+            className="highlight-layer"
+            dangerouslySetInnerHTML={{ __html: renderedHtml + "\n" }}
+          />
+          <textarea
+            ref={textareaRef}
+            className="editor-input"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onScroll={handleScroll}
+            spellCheck={false}
+          />
+        </div>
       </div>
     </div>
   );

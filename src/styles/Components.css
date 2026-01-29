@@ -45,17 +45,29 @@
     box-sizing: border-box;
 }
 
-.editor-input {
-    background: transparent;
-    color: transparent;
-    z-index: 2;
-    resize: none;
-    outline: none;
+.editor-input,
+.highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    margin: 0;
+    border: none;
+    font-family: "Fira Code", monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    /* CHANGE THESE TWO LINES: */
+    white-space: pre; /* Prevents wrapping to new lines */
+    word-wrap: normal; /* Prevents breaking words */
+    box-sizing: border-box;
 }
 
-.highlight-layer {
-    z-index: 1;
-    pointer-events: none;
+.editor-container {
+    position: relative;
+    flex: 1;
+    overflow: auto; /* Allow both horizontal and vertical scrolling */
 }
 
 .output-area {
@@ -63,4 +75,61 @@
     padding: 20px;
     overflow-y: auto;
     font-family: "Fira Code", monospace;
+}
+
+/* Layout Fix */
+.editor-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.gutter {
+    width: 50px;
+    flex-shrink: 0;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.line-number {
+    font-family: "Fira Code", monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: right;
+    padding-right: 12px;
+    color: #6e7681;
+}
+
+/* AST Animation & Sticky */
+.ast-label {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: inherit; /* Hidden background for breadcrumb effect */
+    user-select: none;
+}
+
+.ast-children {
+    transition: all 200ms ease-in-out;
+    max-height: 10000px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+.ast-children.closed {
+    max-height: 0;
+    opacity: 0;
+}
+
+.toggle-icon {
+    transition: transform 200ms ease-in-out;
+    display: inline-block;
+}
+
+.toggle-icon.open {
+    transform: rotate(90deg);
 }

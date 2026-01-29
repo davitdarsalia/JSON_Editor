@@ -1,10 +1,18 @@
 import { FC } from "react";
 import { JSONASTNode } from "../components/JSON_AST_node.component";
 
+interface ASTExplorerPanelProps {
+  ast: ASTNodeData | null;
+  error: JSONErrorInfo | null;
+  width: number;
+  rawJson: string;
+}
+
 export const ASTExplorerPanel: FC<ASTExplorerPanelProps> = ({
   ast,
   error,
   width,
+  rawJson,
 }) => {
   return (
     <div className="panel" style={{ width: `${width}%` }}>
@@ -22,7 +30,7 @@ export const ASTExplorerPanel: FC<ASTExplorerPanelProps> = ({
         )}
 
         {ast ? (
-          <JSONASTNode node={ast} />
+          <JSONASTNode node={ast} rawJson={rawJson} />
         ) : (
           !error && (
             <div className="placeholder">Enter valid JSON to see structure</div>
