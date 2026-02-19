@@ -81,17 +81,51 @@ fn highlight_json(json_str: String) -> Vec<HighlightedToken> {
         .collect()
 }
 
+use regex::Regex;
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AssembleResult {
+    ast: ASTNode,
+    repaired: bool,
+}
+
 #[tauri::command]
-fn assemble_ast(json_str: String) -> Result<ASTNode, JsonErrorInfo> {
+fn assemble_ast(json_str: String) -> Result<AssembleResult, JsonErrorInfo> {
     match serde_json::from_str::<Value>(&json_str) {
-        Ok(v) => Ok(build_node("root".to_string(), v, 0)),
-        Err(e) => Err(JsonErrorInfo {
-            message: e.to_string(),
-            location: Some(ErrorLocation {
-                line: e.line(),
-                column: e.column(),
-            }),
+        Ok(v) => Ok(AssembleResult {
+            ast: build_node("root".to_string(), v, 0),
+            repaired: false,
         }),
+        Err(e) => {
+            // Fuzzy repair attempt
+            let mut repaired_str = json_str.clone();
+            
+            // Remove single-line comments
+            let re_single = Regex::new(r"(?m)//.*$").unwrap();
+            repaired_str = re_single.replace_all(&repaired_str, "").to_string();
+            
+            // Remove multi-line comments
+            let re_multi = Regex::new(r"/\*[\s\S]*?\*/").unwrap();
+            repaired_str = re_multi.replace_all(&repaired_str, "").to_string();
+            
+            // Remove trailing commas in objects and arrays
+            let re_trailing = Regex::new(r",\s*([\]}])").unwrap();
+            repaired_str = re_trailing.replace_all(&repaired_str, "$1").to_string();
+
+            match serde_json::from_str::<Value>(&repaired_str) {
+                Ok(v) => Ok(AssembleResult {
+                    ast: build_node("root".to_string(), v, 0),
+                    repaired: true,
+                }),
+                Err(_) => Err(JsonErrorInfo {
+                    message: e.to_string(),
+                    location: Some(ErrorLocation {
+                        line: e.line(),
+                        column: e.column(),
+                    }),
+                }),
+            }
+        }
     }
 }
 
@@ -190,6 +224,21 @@ mod tests {
         let err = result.unwrap_err();
         assert!(err.message.contains("EOF"));
         assert!(err.location.is_some());
+    }
+
+    #[test]
+    fn test_fuzzy_json_repair() {
+        // Trailing comma and comment
+        let fuzz_json = r#"{
+            "name": "Davit", // A comment
+            "age": 25,
+        }"#;
+        
+        let result = assemble_ast(fuzz_json.to_string());
+        assert!(result.is_ok());
+        let val = result.unwrap();
+        assert!(val.repaired);
+        assert_eq!(val.ast.node_type, "object");
     }
 
     #[test]

@@ -17,11 +17,14 @@ body {
 }
 
 .app-header {
-    height: 35px;
-    min-height: 35px;
+    height: 40px;
+    min-height: 40px;
     display: flex;
     align-items: center;
-    padding-left: 15px;
+    padding-left: 80px; /* Leave space for macOS traffic lights */
     user-select: none;
+    -webkit-user-select: none;
     -webkit-app-region: drag;
+    background: var(--header-bg);
+    border-bottom: 1px solid #333;
 }

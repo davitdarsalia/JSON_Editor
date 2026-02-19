@@ -4,33 +4,49 @@ import { invoke } from "@tauri-apps/api/core";
 export function useJsonAnalyzer(inputData: string) {
   const [ast, setAst] = useState<ASTNodeData | null>(null);
   const [error, setError] = useState<JSONErrorInfo | null>(null);
+  const [repaired, setRepaired] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
+    let isMounted = true;
+    
+    const analyze = async () => {
       if (!inputData.trim()) {
         setAst(null);
         setError(null);
+        setRepaired(false);
         return;
       }
 
       setIsProcessing(true);
       try {
-        const result = await invoke<ASTNodeData>("assemble_ast", {
+        const result = await invoke<AssembleResult>("assemble_ast", {
           jsonStr: inputData,
         });
-        setAst(result);
-        setError(null);
+        if (isMounted) {
+          setAst(result.ast);
+          setRepaired(result.repaired);
+          setError(null);
+        }
       } catch (e) {
-        setAst(null);
-        setError(e as JSONErrorInfo);
+        if (isMounted) {
+          setAst(null);
+          setRepaired(false);
+          setError(e as JSONErrorInfo);
+        }
       } finally {
-        setIsProcessing(false);
+        if (isMounted) {
+          setIsProcessing(false);
+        }
       }
-    }, 250);
+    };
 
-    return () => clearTimeout(timer);
+    analyze();
+
+    return () => {
+      isMounted = false;
+    };
   }, [inputData]);
 
-  return { ast, error, isProcessing };
+  return { ast, error, repaired, isProcessing };
 }

@@ -81,6 +81,7 @@ body {
     color: #aaa;
     margin-right: 10px;
     opacity: 0.7;
+    filter: brightness(0.9);
 }
 .node-tag.object {
     color: var(--syntax-num);
@@ -88,16 +89,29 @@ body {
 .node-tag.array {
     color: var(--syntax-bool);
 }
+.ast-node {
+    margin-left: 20px;
+    font-size: 13px;
+}
 .ast-label {
     user-select: none;
     -webkit-user-select: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    line-height: 1.4;
 }
 .ast-label:hover {
-    background: rgba(100, 108, 255, 0.1);
+    background: rgba(36, 200, 219, 0.1);
 }
 .toggle-icon {
     color: #646cff;
     transition: transform 0.2s ease;
+    filter: brightness(0.9);
+    margin-right: 6px;
 }
 .toggle-icon.open {
     transform: rotate(90deg);
@@ -106,12 +120,16 @@ body {
     display: grid;
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.2s ease-out;
+    overflow: hidden;
 }
 .ast-children-wrapper.open {
     grid-template-rows: 1fr;
 }
 .ast-children {
-    border-left: 1px solid #444;
+    margin: 4px 0;
+    margin-left: 8px;
+    border-left: 1px solid rgba(128, 128, 128, 0.2);
     overflow: hidden;
     min-height: 0;
+    padding-left: 10px;
 }

@@ -25,10 +25,18 @@ declare interface HiglightedToken {
 /*
   Props
 */
+declare interface AssembleResult {
+  ast: ASTNodeData;
+  repaired: boolean;
+}
+
 declare interface ASTExplorerPanelProps {
   ast: ASTNodeData | null;
   error: JSONErrorInfo | null;
+  repaired: boolean;
   width: number;
+  searchQuery: string;
+  isSearchFocused: boolean;
 }
 
 declare interface EditorPanelProps {
