@@ -88,12 +88,30 @@ body {
 .node-tag.array {
     color: var(--syntax-bool);
 }
+.ast-label {
+    user-select: none;
+    -webkit-user-select: none;
+}
 .ast-label:hover {
     background: rgba(100, 108, 255, 0.1);
 }
-.ast-children {
-    border-left: 1px solid #444;
-}
 .toggle-icon {
     color: #646cff;
+    transition: transform 0.2s ease;
+}
+.toggle-icon.open {
+    transform: rotate(90deg);
+}
+.ast-children-wrapper {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.2s ease-out;
+}
+.ast-children-wrapper.open {
+    grid-template-rows: 1fr;
+}
+.ast-children {
+    border-left: 1px solid #444;
+    overflow: hidden;
+    min-height: 0;
 }

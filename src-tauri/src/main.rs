@@ -59,7 +59,11 @@ fn highlight_json(json_str: String) -> Vec<HighlightedToken> {
     let lex = JsonToken::lexer(&json_str);
     lex.spanned()
         .map(|(token, span)| {
-            let text = json_str[span].to_string();
+            let text = json_str[span].to_string()
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+
             let token_type = match token {
                 Ok(JsonToken::Key) => "key",
                 Ok(JsonToken::String) => "string",
@@ -186,5 +190,17 @@ mod tests {
         let err = result.unwrap_err();
         assert!(err.message.contains("EOF"));
         assert!(err.location.is_some());
+    }
+
+    #[test]
+    fn test_highlight_json_escapes_html() {
+        let json = r#"{"html": "<script>alert(1)</script> & text"}"#;
+        let tokens = highlight_json(json.to_string());
+        
+        let html_string_token = tokens.iter().find(|t| t.text.contains("script")).unwrap();
+        assert!(html_string_token.text.contains("&lt;script&gt;"));
+        assert!(html_string_token.text.contains("&amp; text"));
+        assert!(!html_string_token.text.contains("<"));
+        assert!(!html_string_token.text.contains(">"));
     }
 }

@@ -39,4 +39,5 @@ declare interface EditorPanelProps {
 
 declare interface ASTNodeProps {
   node: ASTNodeData;
+  path?: string;
 }

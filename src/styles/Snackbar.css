@@ -1,0 +1,32 @@
+.snackbar {
+    position: fixed;
+    bottom: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--header-bg);
+    color: var(--text-main);
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 9999;
+    border: 1px solid #333;
+}
+
+.snackbar.show {
+    bottom: 30px;
+}
+
+.snackbar-icon {
+    color: var(--syntax-string);
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.snackbar-text {
+    font-size: 14px;
+    font-weight: 500;
+}

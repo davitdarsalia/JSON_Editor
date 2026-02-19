@@ -22,7 +22,15 @@ export const ASTExplorerPanel: FC<ASTExplorerPanelProps> = ({
         )}
 
         {ast ? (
-          <JSONASTNode node={ast} />
+          ast.name === "root" && ast.children ? (
+            <div className="ast-children root-children" style={{ borderLeft: 'none' }}>
+              {ast.children.map((child) => (
+                <JSONASTNode key={child.id} node={child} path={child.name} />
+              ))}
+            </div>
+          ) : (
+            <JSONASTNode node={ast} path={ast.name} />
+          )
         ) : (
           !error && (
             <div className="placeholder">Enter valid JSON to see structure</div>
