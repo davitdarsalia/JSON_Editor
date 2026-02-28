@@ -1,52 +1,71 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
+/** Convert a LazyNode from Rust into a FlatNode for the virtual tree. */
+function toFlatNode(n: LazyNode, depth: number, path: string[]): FlatNode {
+  return {
+    pathKey: path.join("\x00"),
+    name: n.name,
+    node_type: n.node_type,
+    value: n.value,
+    depth,
+    path,
+    childCount: n.child_count,
+  };
+}
+
 export function useJsonAnalyzer(inputData: string) {
-  const [ast, setAst] = useState<ASTNodeData | null>(null);
+  const [rootNodes, setRootNodes] = useState<FlatNode[]>([]);
   const [error, setError] = useState<JSONErrorInfo | null>(null);
   const [repaired, setRepaired] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-    
-    const analyze = async () => {
-      if (!inputData.trim()) {
-        setAst(null);
-        setError(null);
-        setRepaired(false);
-        return;
-      }
+    // Clear immediately when input is emptied
+    if (!inputData.trim()) {
+      setRootNodes([]);
+      setError(null);
+      setRepaired(false);
+      return;
+    }
 
-      setIsProcessing(true);
+    // 300 ms debounce — avoids hammering Rust on every keystroke / paste char
+    const timer = setTimeout(async () => {
       try {
-        const result = await invoke<AssembleResult>("assemble_ast", {
+        const result = await invoke<ParseResult>("parse_json", {
           jsonStr: inputData,
         });
-        if (isMounted) {
-          setAst(result.ast);
-          setRepaired(result.repaired);
-          setError(null);
-        }
+        const nodes = result.nodes.map((n) => toFlatNode(n, 0, [n.name]));
+        setRootNodes(nodes);
+        setRepaired(result.repaired);
+        setError(null);
       } catch (e) {
-        if (isMounted) {
-          setAst(null);
-          setRepaired(false);
-          setError(e as JSONErrorInfo);
-        }
-      } finally {
-        if (isMounted) {
-          setIsProcessing(false);
-        }
+        setRootNodes([]);
+        setRepaired(false);
+        setError(e as JSONErrorInfo);
       }
-    };
+    }, 300);
 
-    analyze();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => clearTimeout(timer);
   }, [inputData]);
 
-  return { ast, error, repaired, isProcessing };
+  /**
+   * Lazy-load the children of a node.
+   * Called by VirtualASTTree when the user expands a container node.
+   * Children's depth = parentPath.length (root children are at depth 0).
+   */
+  const loadChildren = useCallback(
+    async (parentPath: string[]): Promise<FlatNode[]> => {
+      const childDepth = parentPath.length;
+      const children = await invoke<LazyNode[]>("get_children", {
+        path: parentPath,
+      });
+      return children.map((n) => {
+        const childPath = [...parentPath, n.name];
+        return toFlatNode(n, childDepth, childPath);
+      });
+    },
+    [],
+  );
+
+  return { rootNodes, error, repaired, loadChildren };
 }

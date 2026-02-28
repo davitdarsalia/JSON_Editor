@@ -1,99 +1,91 @@
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { EditorPanel } from "./widgets/EditorPanel.widget";
 import { ASTExplorerPanel } from "./widgets/ASTExplorerPanel.widget";
 import { useJsonAnalyzer } from "./hooks/useJsonAnalyzer.hook";
+import { Header } from "./components/Header";
+import { SplitView } from "./components/SplitView";
 import { Snackbar } from "./components/Snackbar.component";
 
+function showSnackbar(message: string) {
+  window.dispatchEvent(
+    new CustomEvent("show-snackbar", { detail: { message } }),
+  );
+}
+
 function App() {
-  const [leftWidth, setLeftWidth] = useState(50);
   const [inputData, setInputData] = useState("");
-  const { ast, error, repaired } = useJsonAnalyzer(inputData);
-  const [isResizing, setIsResizing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const resize = useCallback(
-    (e: MouseEvent) => {
-      if (isResizing) {
-        const newWidth = (e.clientX / window.innerWidth) * 100;
-        if (newWidth > 10 && newWidth < 90) setLeftWidth(newWidth);
-      }
-    },
-    [isResizing],
-  );
+  const { rootNodes, error, repaired, loadChildren } = useJsonAnalyzer(inputData);
 
+  // Stable ref so menu-event listeners always see the latest editor content
+  const inputDataRef = useRef(inputData);
   useEffect(() => {
-    window.addEventListener("mousemove", resize);
-    const stop = () => setIsResizing(false);
+    inputDataRef.current = inputData;
+  }, [inputData]);
 
-    window.addEventListener("mouseup", stop);
+  const handleBeautify = useCallback(async () => {
+    try {
+      const formatted = await invoke<string>("format_json", {
+        jsonStr: inputDataRef.current,
+      });
+      setInputData(formatted);
+    } catch (e: any) {
+      showSnackbar(`Format error: ${e}`);
+    }
+  }, []);
+
+  const handleValidate = useCallback(async () => {
+    try {
+      await invoke("validate_json", { jsonStr: inputDataRef.current });
+      showSnackbar("✓ Valid JSON");
+    } catch (e: any) {
+      showSnackbar(`✗ ${e?.message ?? "Invalid JSON"}`);
+    }
+  }, []);
+
+  // Wire native macOS menu events -> app actions
+  useEffect(() => {
+    const subs = [
+      listen("menu:pretty-json", () => handleBeautify()),
+      listen("menu:validate-json", () => handleValidate()),
+      listen<string>("file-opened", (e) => setInputData(e.payload)),
+    ];
     return () => {
-      window.removeEventListener("mousemove", resize);
-      window.removeEventListener("mouseup", stop);
+      subs.forEach((p) => p.then((unsub) => unsub()));
     };
-  }, [resize]);
+  }, [handleBeautify, handleValidate]);
 
   return (
     <main className="container">
-      {/* Native macOS Overlay Header */}
-      <div className="app-header" style={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        paddingRight: '15px',
-        // @ts-ignore
-        WebkitAppRegion: 'drag',
-        background: 'var(--header-bg)',
-      }}>
-        <div className="search-bar" style={{
-          display: 'flex',
-          alignItems: 'center',
-          width: '240px',
-          height: '28px',
-          // @ts-ignore
-          WebkitAppRegion: 'no-drag'
-        }}>
-          <input
-            type="search"
-            placeholder="Search JSON..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => {
-              if (!searchQuery.trim()) setIsSearchFocused(false);
-            }}
-            style={{
-              width: '100%',
-              fontSize: '13px',
-              fontFamily: 'Inter, -apple-system, sans-serif',
-              colorScheme: 'dark',
-              WebkitAppearance: 'searchfield',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '6px',
-              padding: '2px 6px',
-            }}
-          />
-        </div>
-      </div>
+      <Header
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearchFocus={() => setIsSearchFocused(true)}
+        onSearchBlur={() => setIsSearchFocused(false)}
+        onBeautify={handleBeautify}
+      />
 
-      <div className="split-view">
-        <EditorPanel
-          value={inputData}
-          onChange={setInputData}
-          width={leftWidth}
-        />
-        
-        <div className="divider" onMouseDown={() => setIsResizing(true)} />
-        
-        <ASTExplorerPanel
-          ast={ast}
-          error={error}
-          repaired={repaired}
-          width={100 - leftWidth}
-          searchQuery={searchQuery}
-          isSearchFocused={isSearchFocused}
-        />
-      </div>
+      <SplitView
+        renderLeft={(w) => (
+          <EditorPanel value={inputData} onChange={setInputData} width={w} />
+        )}
+        renderRight={(w) => (
+          <ASTExplorerPanel
+            rootNodes={rootNodes}
+            error={error}
+            repaired={repaired}
+            width={w}
+            searchQuery={searchQuery}
+            isSearchFocused={isSearchFocused}
+            loadChildren={loadChildren}
+          />
+        )}
+      />
+
       <Snackbar />
     </main>
   );

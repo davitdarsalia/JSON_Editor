@@ -1,0 +1,91 @@
+/* ── App shell ──────────────────────────────────────────────────────────────── */
+
+.app-header {
+    height: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 80px; /* traffic-light space */
+    padding-right: 15px;
+    user-select: none;
+    -webkit-user-select: none;
+    /* @ts-ignored via inline style for WebkitAppRegion — kept there */
+}
+
+/* ── Header left side (beautify button) ─────────────────────────────────────── */
+
+.header-actions {
+    display: flex;
+    align-items: center;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-app-region: no-drag;
+}
+
+.icon-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Search bar ──────────────────────────────────────────────────────────────── */
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    width: 240px;
+    height: 28px;
+    -webkit-app-region: no-drag;
+}
+
+.search-input {
+    width: 100%;
+    font-size: 13px;
+    font-family: Inter, -apple-system, sans-serif;
+    color-scheme: dark;
+    -webkit-appearance: searchfield;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+/* ── Split view ──────────────────────────────────────────────────────────────── */
+
+.split-view {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.split-divider {
+    width: 4px;
+    cursor: col-resize;
+    z-index: 10;
+    transition: width 0.2s;
+    background-color: var(--divider-bg);
+}
+
+.split-divider:hover {
+    width: 6px;
+    background-color: var(--accent);
+}
+
+/* ── Placeholder text ────────────────────────────────────────────────────────── */
+
+.placeholder {
+    color: #666;
+    font-family: Inter, sans-serif;
+    font-size: 14px;
+    padding: 20px;
+}

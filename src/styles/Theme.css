@@ -92,17 +92,22 @@ body {
 .ast-node {
     margin-left: 20px;
     font-size: 13px;
+    width: max-content;
+    min-width: 100%;
 }
 .ast-label {
     user-select: none;
     -webkit-user-select: none;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     padding: 6px 8px;
     border-radius: 4px;
     white-space: nowrap;
     line-height: 1.4;
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
 }
 .ast-label:hover {
     background: rgba(36, 200, 219, 0.1);
@@ -121,6 +126,8 @@ body {
     grid-template-rows: 0fr;
     transition: grid-template-rows 0.2s ease-out;
     overflow: hidden;
+    width: max-content;
+    min-width: 100%;
 }
 .ast-children-wrapper.open {
     grid-template-rows: 1fr;
@@ -132,4 +139,6 @@ body {
     overflow: hidden;
     min-height: 0;
     padding-left: 10px;
+    width: max-content;
+    min-width: 100%;
 }

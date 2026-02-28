@@ -37,12 +37,17 @@
     padding: 20px;
     margin: 0;
     border: none;
-    font-family: "Fira Code", monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 14px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    line-height: 21px; /* explicitly set to exact px to perfectly align textarea and pre */
+    white-space: pre; /* NO WRAPPING, allows horizontal scrolling */
+    word-wrap: normal;
     box-sizing: border-box;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    letter-spacing: normal;
+    word-spacing: normal;
+    text-align: left;
 }
 
 .editor-input {
@@ -51,17 +56,21 @@
     z-index: 2;
     resize: none;
     outline: none;
+    overflow: auto;
+    caret-color: var(--accent);
 }
 
 .highlight-layer {
     z-index: 1;
     pointer-events: none;
+    overflow: hidden; /* Hide scrollbars, synced via JS */
+    color: var(--text-main);
 }
 
 .output-area {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
-    overflow-x: auto;
+    overflow-x: auto; /* Ensure horizontal scrolling */
     font-family: "Fira Code", monospace;
 }
