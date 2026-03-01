@@ -3,6 +3,7 @@
 /** Compact node returned by Rust — no recursive children. */
 declare interface LazyNode {
   name: string;
+  path_segment: string;
   node_type: string;
   value?: string;
   child_count: number;
@@ -27,6 +28,20 @@ declare interface FlatNode {
   /** Full path from root to this node — passed to get_children / get_subtree. */
   path: string[];
   childCount: number;
+}
+
+// ── Search ────────────────────────────────────────────────────────────────────
+
+declare interface SearchResult {
+  name: string;
+  node_type: string;
+  value?: string;
+  /** Navigation path (same format used by get_children / get_subtree). */
+  path: string[];
+  /** Human-readable path of the parent node, e.g. "packages › node_modules". Empty for root-level nodes. */
+  path_display: string;
+  child_count: number;
+  match_in: "key" | "value";
 }
 
 // ── Error types ───────────────────────────────────────────────────────────────

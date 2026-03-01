@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { EditorPanelHandle } from "./widgets/EditorPanel.widget";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { EditorPanel } from "./widgets/EditorPanel.widget";
@@ -23,6 +24,8 @@ function App() {
 
   // Stable ref so menu-event listeners always see the latest editor content
   const inputDataRef = useRef(inputData);
+  const editorRef = useRef<EditorPanelHandle>(null);
+
   useEffect(() => {
     inputDataRef.current = inputData;
   }, [inputData]);
@@ -70,8 +73,14 @@ function App() {
       />
 
       <SplitView
+        onResizeEnd={() => editorRef.current?.focus()}
         renderLeft={(w) => (
-          <EditorPanel value={inputData} onChange={setInputData} width={w} />
+          <EditorPanel
+            ref={editorRef}
+            value={inputData}
+            onChange={setInputData}
+            width={w}
+          />
         )}
         renderRight={(w) => (
           <ASTExplorerPanel

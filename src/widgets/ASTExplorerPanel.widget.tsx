@@ -19,7 +19,7 @@ export const ASTExplorerPanel: FC<ASTExplorerPanelProps> = ({
 
   return (
     <div
-      className="panel"
+      className="panel output-panel"
       style={{ width: `${width}%`, display: "flex", flexDirection: "column" }}
     >
       <div
@@ -41,7 +41,8 @@ export const ASTExplorerPanel: FC<ASTExplorerPanelProps> = ({
               borderLeft: "4px solid orange",
               padding: "12px",
               flexShrink: 0,
-              fontFamily: "Inter, sans-serif",
+              fontFamily: "var(--mono-font)",
+              fontSize: 14,
               position: "relative",
             }}
           >
@@ -74,7 +75,7 @@ export const ASTExplorerPanel: FC<ASTExplorerPanelProps> = ({
             >
               ⚠️ Auto-Repaired JSON
             </strong>
-            <span style={{ color: "#ccc", fontSize: 13 }}>
+            <span style={{ color: "var(--syntax-null)", fontSize: 14 }}>
               Your JSON had errors (trailing commas / comments) that were
               automatically fixed.
             </span>
@@ -84,24 +85,22 @@ export const ASTExplorerPanel: FC<ASTExplorerPanelProps> = ({
         {/* Error banner */}
         {error && (
           <div className="error-banner" style={{ flexShrink: 0 }}>
-            <span className="error-title">Syntax Error</span>
+            <span className="error-title">Invalid JSON</span>
             <p className="error-msg">{error.message}</p>
             {error.location && (
               <span className="error-loc">
-                Line: {error.location.line}, Col: {error.location.column}
+                Go to line {error.location.line}, column {error.location.column} to fix it
               </span>
             )}
           </div>
         )}
 
-        {/* Virtual tree or placeholder */}
         {rootNodes.length > 0 ? (
           <div style={{ flex: 1, overflow: "hidden" }}>
             <VirtualASTTree
               rootNodes={rootNodes}
               loadChildren={loadChildren}
               searchQuery={searchQuery}
-              isSearchFocused={isSearchFocused}
             />
           </div>
         ) : (

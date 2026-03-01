@@ -38,6 +38,14 @@
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* ── Drag region (between button and search) ─────────────────────────────────── */
+
+.header-drag-region {
+    flex: 1;
+    min-width: 60px;
+    -webkit-app-region: drag;
+}
+
 /* ── Search bar ──────────────────────────────────────────────────────────────── */
 
 .search-bar {
@@ -74,6 +82,15 @@
     z-index: 10;
     transition: width 0.2s;
     background-color: var(--divider-bg);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Prevent text selection in panels while dragging divider */
+body.split-resizing,
+body.split-resizing * {
+    user-select: none !important;
+    -webkit-user-select: none !important;
 }
 
 .split-divider:hover {
@@ -84,8 +101,8 @@
 /* ── Placeholder text ────────────────────────────────────────────────────────── */
 
 .placeholder {
-    color: #666;
-    font-family: Inter, sans-serif;
-    font-size: 14px;
-    padding: 20px;
+    color: var(--syntax-null);
+    font-family: var(--mono-font);
+    font-size: var(--content-size);
+    padding: 0;
 }

@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,129 @@ function flattenTree(
   return out;
 }
 
+// ── Semantic type detection ───────────────────────────────────────────────────
+
+type SemanticType = "url" | "email" | null;
+
+function detectSemantic(value: string | undefined): SemanticType {
+  if (!value) return null;
+  const v = value.trim();
+  // URL — must start with http(s):// or ftp://
+  if (/^https?:\/\/.{3,}/i.test(v) || /^ftp:\/\/.{3,}/i.test(v)) return "url";
+  // Email — basic RFC 5322 shape
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return "email";
+  return null;
+}
+
+// ── Search results panel ──────────────────────────────────────────────────────
+
+
+function searchResultToFlatNode(r: SearchResult): FlatNode {
+  return {
+    pathKey: r.path.length > 0 ? r.path.join("\x00") : r.name,
+    name: r.name,
+    node_type: r.node_type,
+    value: r.value,
+    depth: 0,
+    path: r.path,
+    childCount: r.child_count,
+  };
+}
+
+interface SearchPanelProps {
+  results: SearchResult[];
+  isLoading: boolean;
+  truncated: boolean;
+  loadChildren: (parentPath: string[]) => Promise<FlatNode[]>;
+  onCopyNode: (node: FlatNode) => void;
+  onContextMenu: (e: React.MouseEvent, node: FlatNode) => void;
+}
+
+const SearchResultsPanel: FC<SearchPanelProps> = ({
+  results,
+  isLoading,
+  truncated,
+  loadChildren,
+  onCopyNode,
+  onContextMenu,
+}) => {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [childrenMap, setChildrenMap] = useState<Map<string, FlatNode[]>>(new Map());
+  const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
+
+  // Reset expansion whenever the result set changes
+  useEffect(() => {
+    setExpanded(new Set());
+    setChildrenMap(new Map());
+    setLoadingKeys(new Set());
+  }, [results]);
+
+  const handleToggle = useCallback(
+    async (node: FlatNode) => {
+      const { pathKey, path, depth } = node;
+      if (expanded.has(pathKey)) {
+        setExpanded((prev) => { const n = new Set(prev); n.delete(pathKey); return n; });
+        return;
+      }
+      setExpanded((prev) => new Set([...prev, pathKey]));
+      if (!childrenMap.has(pathKey)) {
+        setLoadingKeys((prev) => new Set([...prev, pathKey]));
+        try {
+          const children = await loadChildren(path);
+          // Children come back with absolute depth (path.length).
+          // Offset them so they appear 1 level below their parent in the panel.
+          const depthOffset = depth + 1 - path.length;
+          const normalised = children.map((c) => ({ ...c, depth: c.depth + depthOffset }));
+          setChildrenMap((prev) => new Map([...prev, [pathKey, normalised]]));
+        } catch {
+          setExpanded((prev) => { const n = new Set(prev); n.delete(pathKey); return n; });
+        } finally {
+          setLoadingKeys((prev) => { const n = new Set(prev); n.delete(pathKey); return n; });
+        }
+      }
+    },
+    [expanded, childrenMap, loadChildren],
+  );
+
+  const rootNodes = useMemo(() => results.map(searchResultToFlatNode), [results]);
+  const flatNodes = useMemo(
+    () => flattenTree(rootNodes, expanded, childrenMap),
+    [rootNodes, expanded, childrenMap],
+  );
+
+  return (
+    <div className="search-results-container">
+      <div className="search-results-header">
+        {isLoading ? (
+          <span className="search-count">Searching…</span>
+        ) : (
+          <span className="search-count">
+            {truncated ? "500+" : results.length}{" "}
+            result{results.length !== 1 ? "s" : ""}
+            {truncated ? " · showing first 500" : ""}
+          </span>
+        )}
+      </div>
+
+      {flatNodes.map((node) => {
+        const isExpanded_ = expanded.has(node.pathKey);
+        const isLoading_ = loadingKeys.has(node.pathKey);
+        return (
+          <NodeRow
+            key={node.pathKey}
+            node={node}
+            isExpanded={isExpanded_}
+            isLoading={isLoading_}
+            onToggle={handleToggle}
+            onCopyNode={onCopyNode}
+            onContextMenu={onContextMenu}
+          />
+        );
+      })}
+    </div>
+  );
+};
+
 // ── NodeRow ───────────────────────────────────────────────────────────────────
 
 interface RowProps {
@@ -61,7 +185,9 @@ const NodeRow: FC<RowProps> = ({
     <div
       className="ast-label"
       style={{ paddingLeft: indent, height: ROW_H, boxSizing: "border-box" }}
-      onClick={() => onCopyNode(node)}
+      onClick={() =>
+        node.childCount > 0 ? onToggle(node) : onCopyNode(node)
+      }
       onContextMenu={(e) => onContextMenu(e, node)}
     >
       {/* Expand toggle */}
@@ -70,7 +196,7 @@ const NodeRow: FC<RowProps> = ({
         style={{ visibility: node.childCount > 0 ? "visible" : "hidden" }}
         onClick={(e) => {
           e.stopPropagation();
-          onToggle(node);
+          if (node.childCount > 0) onToggle(node);
         }}
       >
         {isLoading ? "⋯" : "▶"}
@@ -87,10 +213,10 @@ const NodeRow: FC<RowProps> = ({
       {node.childCount > 0 && !isExpanded && (
         <span
           style={{
-            color: "#666",
-            fontSize: 11,
+            color: "var(--syntax-null)",
+            fontSize: 12,
             marginLeft: 6,
-            fontFamily: "Inter, sans-serif",
+            fontFamily: "var(--mono-font)",
           }}
         >
           {node.childCount} {node.node_type === "array" ? "items" : "fields"}
@@ -106,14 +232,12 @@ interface Props {
   rootNodes: FlatNode[];
   loadChildren: (parentPath: string[]) => Promise<FlatNode[]>;
   searchQuery: string;
-  isSearchFocused: boolean;
 }
 
 export const VirtualASTTree: FC<Props> = ({
   rootNodes,
   loadChildren,
   searchQuery,
-  isSearchFocused,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -124,6 +248,33 @@ export const VirtualASTTree: FC<Props> = ({
   const [childrenMap, setChildrenMap] = useState<Map<string, FlatNode[]>>(
     new Map(),
   );
+
+  // ── Search state ────────────────────────────────────────────────────────────
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchTruncated, setSearchTruncated] = useState(false);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const results = await invoke<SearchResult[]>("search_json", { query: q });
+        setSearchResults(results);
+        setSearchTruncated(results.length >= 500);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Reset expansion when root nodes change (new JSON pasted)
   useEffect(() => {
@@ -145,21 +296,10 @@ export const VirtualASTTree: FC<Props> = ({
 
   // ── Flat list (memoised) ────────────────────────────────────────────────────
 
-  const flatNodes = useMemo(() => {
-    let nodes = flattenTree(rootNodes, expanded, childrenMap);
-
-    // Filter by search query (only loaded nodes are searchable)
-    if (searchQuery.trim() && isSearchFocused) {
-      const q = searchQuery.toLowerCase();
-      nodes = nodes.filter(
-        (n) =>
-          n.name.toLowerCase().includes(q) ||
-          (n.value?.toLowerCase().includes(q) ?? false),
-      );
-    }
-
-    return nodes;
-  }, [rootNodes, expanded, childrenMap, searchQuery, isSearchFocused]);
+  const flatNodes = useMemo(
+    () => flattenTree(rootNodes, expanded, childrenMap),
+    [rootNodes, expanded, childrenMap],
+  );
 
   // ── Virtual scroll maths ────────────────────────────────────────────────────
 
@@ -299,7 +439,30 @@ export const VirtualASTTree: FC<Props> = ({
           },
         });
 
-        const menu = await Menu.new({ items: [copyNode, copyValue, copyKey, copyPath] });
+        const baseItems = [copyNode, copyValue, copyKey, copyPath];
+
+        // ── Semantic extras ───────────────────────────────────────────────
+        const { MenuItem, PredefinedMenuItem } = await import("@tauri-apps/api/menu");
+        const semantic = node.childCount === 0 ? detectSemantic(node.value) : null;
+
+        const semanticItems = [];
+        if (semantic === "url") {
+          semanticItems.push(await PredefinedMenuItem.new({ item: "Separator" }));
+          semanticItems.push(await MenuItem.new({
+            id: "open-url",
+            text: "Open Link",
+            action: () => openUrl(node.value!),
+          }));
+        } else if (semantic === "email") {
+          semanticItems.push(await PredefinedMenuItem.new({ item: "Separator" }));
+          semanticItems.push(await MenuItem.new({
+            id: "open-email",
+            text: "Send Email",
+            action: () => openUrl(`mailto:${node.value}`),
+          }));
+        }
+
+        const menu = await Menu.new({ items: [...baseItems, ...semanticItems] });
         await menu.popup();
       } catch {
         // Fallback: just copy node
@@ -313,6 +476,8 @@ export const VirtualASTTree: FC<Props> = ({
 
   if (rootNodes.length === 0) return null;
 
+  const isSearching = searchQuery.trim() !== "";
+
   return (
     <div
       ref={containerRef}
@@ -322,40 +487,53 @@ export const VirtualASTTree: FC<Props> = ({
         overflowX: "auto",
         position: "relative",
       }}
-      onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+      onScroll={(e) => {
+        if (!isSearching) setScrollTop(e.currentTarget.scrollTop);
+      }}
     >
-      {/* Spacer that gives the scrollbar its full range */}
-      <div style={{ height: totalH, position: "relative", minWidth: "max-content" }}>
-        {visibleNodes.map((node, i) => {
-          const absIdx = startIdx + i;
-          const isExpanded_ = expanded.has(node.pathKey);
-          const isLoading_ =
-            isExpanded_ && node.childCount > 0 && !childrenMap.has(node.pathKey);
+      {isSearching ? (
+        <SearchResultsPanel
+          results={searchResults}
+          isLoading={searchLoading}
+          truncated={searchTruncated}
+          loadChildren={loadChildren}
+          onCopyNode={handleCopyNode}
+          onContextMenu={handleContextMenu}
+        />
+      ) : (
+        /* Spacer that gives the scrollbar its full range */
+        <div style={{ height: totalH, position: "relative", minWidth: "max-content" }}>
+          {visibleNodes.map((node, i) => {
+            const absIdx = startIdx + i;
+            const isExpanded_ = expanded.has(node.pathKey);
+            const isLoading_ =
+              isExpanded_ && node.childCount > 0 && !childrenMap.has(node.pathKey);
 
-          return (
-            <div
-              key={node.pathKey}
-              style={{
-                position: "absolute",
-                top: absIdx * ROW_H,
-                height: ROW_H,
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <NodeRow
-                node={node}
-                isExpanded={isExpanded_}
-                isLoading={isLoading_}
-                onToggle={handleToggle}
-                onCopyNode={handleCopyNode}
-                onContextMenu={handleContextMenu}
-              />
-            </div>
-          );
-        })}
-      </div>
+            return (
+              <div
+                key={node.pathKey}
+                style={{
+                  position: "absolute",
+                  top: absIdx * ROW_H,
+                  height: ROW_H,
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <NodeRow
+                  node={node}
+                  isExpanded={isExpanded_}
+                  isLoading={isLoading_}
+                  onToggle={handleToggle}
+                  onCopyNode={handleCopyNode}
+                  onContextMenu={handleContextMenu}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

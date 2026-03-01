@@ -1,18 +1,25 @@
 :root {
-    --bg-main: #f6f6f6;
-    --text-main: #0f0f0f;
+    --bg-main: #f0ede8;
+    --text-main: #2d3748;
     --header-bg: #1e1e1e;
     --header-text: #888;
-    --divider-bg: dodgerblue;
-    --accent: #24c8db;
+    --divider-bg: #cbd5e0;
+    --accent: #2b6cb0;
 
-    /* Syntax Tokens */
-    --syntax-key: #e06c75;
-    --syntax-string: #98c379;
-    --syntax-num: #d19a66;
-    --syntax-bool: #c678dd;
-    --syntax-null: #56b6c2;
-    --panel-bg: rgba(0, 0, 0, 0.05);
+    /* Unified background — same on both sides */
+    --panel-bg: #f0ede8;
+    --panel-text: #2d3748;
+
+    /* Syntax tokens — same palette on both sides */
+    --syntax-key: #b83280;
+    --syntax-string: #276f42;
+    --syntax-num: #2b6cb0;
+    --syntax-bool: #805ad5;
+    --syntax-null: #718096;
+
+    /* Typography — unified across panels */
+    --mono-font: "SF Mono", "Menlo", "Ubuntu Mono", monospace;
+    --content-size: 14px;
 
     font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -20,9 +27,16 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-main: #2f2f2f;
-        --text-main: #f6f6f6;
-        --panel-bg: rgba(255, 255, 255, 0.03);
+        --bg-main: #171923;
+        --text-main: #e2e8f0;
+        --panel-bg: #171923;
+        --panel-text: #e2e8f0;
+
+        --syntax-key: #f687b3;
+        --syntax-string: #68d391;
+        --syntax-num: #63b3ed;
+        --syntax-bool: #b794f4;
+        --syntax-null: #a0aec0;
     }
 }
 
@@ -30,23 +44,29 @@ body {
     background-color: var(--bg-main);
     color: var(--text-main);
 }
+
 .app-header {
     background: var(--header-bg);
     color: var(--header-text);
     border-bottom: 1px solid #333;
 }
+
 .divider {
     background-color: var(--divider-bg);
 }
+
 .divider:hover {
     background-color: var(--accent);
 }
+
 .editor-input {
     caret-color: var(--accent);
 }
+
 .highlight-layer {
     color: var(--text-main);
 }
+
 .output-area {
     background-color: var(--panel-bg);
 }
@@ -57,45 +77,61 @@ body {
     color: var(--syntax-key);
     margin-right: 12px;
 }
+
 .string,
 .node-val {
     color: var(--syntax-string);
     font-weight: 500;
 }
+
 .number {
     color: var(--syntax-num);
 }
+
 .boolean {
     color: var(--syntax-bool);
 }
+
 .null {
     color: var(--syntax-null);
 }
 
 .node-tag {
-    font-size: 9px;
+    font-size: 11px;
+    font-family: var(--mono-font);
     padding: 2px 6px;
-    border-radius: 3px;
-    text-transform: uppercase;
-    background: #333;
-    color: #aaa;
+    border-radius: 4px;
+    text-transform: capitalize;
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--syntax-null);
     margin-right: 10px;
-    opacity: 0.7;
-    filter: brightness(0.9);
 }
+
+@media (prefers-color-scheme: dark) {
+    .node-tag {
+        background: rgba(255, 255, 255, 0.08);
+    }
+}
+
 .node-tag.object {
     color: var(--syntax-num);
 }
+
 .node-tag.array {
     color: var(--syntax-bool);
 }
+
 .ast-node {
     margin-left: 20px;
-    font-size: 13px;
+    font-size: var(--content-size);
+    font-family: var(--mono-font);
     width: max-content;
     min-width: 100%;
 }
+
 .ast-label {
+    font-family: var(--mono-font);
+    font-size: var(--content-size);
     user-select: none;
     -webkit-user-select: none;
     cursor: pointer;
@@ -104,23 +140,32 @@ body {
     padding: 6px 8px;
     border-radius: 4px;
     white-space: nowrap;
-    line-height: 1.4;
+    line-height: 1.5;
     width: max-content;
     min-width: 100%;
     box-sizing: border-box;
 }
+
 .ast-label:hover {
-    background: rgba(36, 200, 219, 0.1);
+    background: rgba(43, 108, 176, 0.1);
 }
+
+@media (prefers-color-scheme: dark) {
+    .ast-label:hover {
+        background: rgba(99, 179, 237, 0.12);
+    }
+}
+
 .toggle-icon {
-    color: #646cff;
+    color: var(--syntax-num);
     transition: transform 0.2s ease;
-    filter: brightness(0.9);
     margin-right: 6px;
 }
+
 .toggle-icon.open {
     transform: rotate(90deg);
 }
+
 .ast-children-wrapper {
     display: grid;
     grid-template-rows: 0fr;
@@ -129,9 +174,11 @@ body {
     width: max-content;
     min-width: 100%;
 }
+
 .ast-children-wrapper.open {
     grid-template-rows: 1fr;
 }
+
 .ast-children {
     margin: 4px 0;
     margin-left: 8px;

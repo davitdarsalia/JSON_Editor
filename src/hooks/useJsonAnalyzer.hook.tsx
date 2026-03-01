@@ -34,7 +34,7 @@ export function useJsonAnalyzer(inputData: string) {
         const result = await invoke<ParseResult>("parse_json", {
           jsonStr: inputData,
         });
-        const nodes = result.nodes.map((n) => toFlatNode(n, 0, [n.name]));
+        const nodes = result.nodes.map((n) => toFlatNode(n, 0, [n.path_segment]));
         setRootNodes(nodes);
         setRepaired(result.repaired);
         setError(null);
@@ -60,7 +60,7 @@ export function useJsonAnalyzer(inputData: string) {
         path: parentPath,
       });
       return children.map((n) => {
-        const childPath = [...parentPath, n.name];
+        const childPath = [...parentPath, n.path_segment];
         return toFlatNode(n, childDepth, childPath);
       });
     },
